@@ -161,7 +161,7 @@ def _apply_cooldown(self, command: str) -> Optional[str]:
 
 ### 3. Improve Speech Recognition
 
-You can enhance recognition accuracy by:
+You can improve recognition accuracy by:
 
 1. Using a larger Vosk model
 2. Adding custom vocabulary or word boosting:
