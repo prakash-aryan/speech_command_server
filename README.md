@@ -2,6 +2,9 @@
 
 A real-time voice command detection system that recognizes "play" and "pause" commands using Vosk speech recognition.
 
+[Demo](https://github.com/user-attachments/assets/6401734d-8ede-4605-810c-c4d6c2280e5c)
+
+
 ![System Architecture](sysArch.png)
 
 ## Features
@@ -34,7 +37,7 @@ As shown in the architecture diagram above, the system consists of two main part
 
 1. Clone the repository:
    ```
-   git clone
+   git clone git@github.com:prakash-aryan/speech_command_server.git
    cd speech_command_server
    ```
 
