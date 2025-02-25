@@ -1,0 +1,48 @@
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# Vosk model data (large files)
+models/data/vosk-model-small-en-us-0.15/
+models/data/*.zip
+models/data/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Logs
+*.log
+logs/
+
+# IDE specific files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.ipynb_checkpoints/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+.directory
+.Trash-*
+
+# Environment variables
+.env
+.env.local
+
+# Temporary files
+tmp/
+temp/

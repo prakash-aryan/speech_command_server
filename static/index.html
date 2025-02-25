@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Command Controller</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/adapter.js/8.0.0/adapter.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        h1 {
+            margin-bottom: 30px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border-left: 5px solid #28a745;
+        }
+        
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-left: 5px solid #dc3545;
+        }
+        
+        .status.listening {
+            background-color: #cce5ff;
+            color: #004085;
+            border-left: 5px solid #007bff;
+        }
+        
+        .button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 5px;
+            cursor: pointer;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-weight: 500;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .button.stop {
+            background-color: #f44336;
+        }
+        
+        .button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .logs {
+            margin-top: 30px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            height: 200px;
+            overflow-y: auto;
+            text-align: left;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .logs div {
+            padding: 3px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .command-display {
+            font-size: 24px;
+            margin: 30px 0;
+            height: 180px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #transcription {
+            font-size: 16px;
+            color: #666;
+            margin-top: 15px;
+            min-height: 20px;
+            padding: 8px 15px;
+            background-color: rgba(0,0,0,0.04);
+            border-radius: 8px;
+            max-width: 80%;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        #transcription:not(:empty) {
+            border-left: 3px solid #3498db;
+        }
+        
+        .command-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin-bottom: 20px;
+        }
+        
+        .emoji {
+            font-size: 60px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+        }
+        
+        #command-text {
+            font-size: 20px;
+            margin-top: 10px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .pulse {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background-color: rgba(50, 150, 255, 0.3);
+            animation: pulse 2s infinite;
+            display: none;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(0.95);
+                opacity: 0.7;
+            }
+            70% {
+                transform: translate(-50%, -50%) scale(1.1);
+                opacity: 0.2;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(0.95);
+                opacity: 0.7;
+            }
+        }
+        
+        .listening-waves {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 150px;
+            height: 150px;
+            display: none;
+        }
+        
+        .wave {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            box-sizing: border-box;
+            border: 2px solid #3498db;
+            opacity: 0;
+            animation: wave 2s infinite;
+        }
+        
+        .wave:nth-child(2) {
+            animation-delay: 0.3s;
+        }
+        
+        .wave:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+        
+        @keyframes wave {
+            0% {
+                transform: scale(0.5);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1.2);
+                opacity: 0;
+            }
+        }
+        
+        .command-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        
+        .command-notification.play {
+            background-color: #27ae60;
+        }
+        
+        .command-notification.pause {
+            background-color: #e74c3c;
+        }
+        
+        .command-notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .ripple-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 50%;
+            width: 150px;
+            height: 150px;
+            background-color: rgba(52, 152, 219, 0.1);
+            margin: 0 auto;
+            display: none;
+        }
+        
+        .ripple {
+            position: absolute;
+            background-color: rgba(52, 152, 219, 0.7);
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: ripple-animation 2s linear infinite;
+        }
+        
+        @keyframes ripple-animation {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(20);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="command-notification" id="notification"></div>
+    
+    <h1>Speech Command Controller</h1>
+    
+    <div id="status" class="status disconnected">
+        Disconnected
+    </div>
+    
+    <div class="command-display">
+        <div class="command-container">
+            <div class="ripple-container" id="rippleContainer">
+                <div class="ripple"></div>
+            </div>
+            
+            <div class="listening-waves" id="listeningWaves">
+                <div class="wave"></div>
+                <div class="wave"></div>
+                <div class="wave"></div>
+            </div>
+            
+            <div class="pulse" id="pulse"></div>
+            <span id="command-emoji" class="emoji">⏸️</span>
+        </div>
+        <div id="command-text">Say "play" or "pause"</div>
+        <div id="transcription" style="font-size: 16px; color: #666; margin-top: 10px; min-height: 20px;"></div>
+    </div>
+    
+    <button id="startButton" class="button">Start Listening</button>
+    <button id="stopButton" class="button stop" disabled>Stop Listening</button>
+    
+    <div class="logs" id="logs"></div>
+    
+    <script>
+        // DOM Elements
+        const statusEl = document.getElementById('status');
+        const logsEl = document.getElementById('logs');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const commandEmoji = document.getElementById('command-emoji');
+        const commandText = document.getElementById('command-text');
+        const listeningWaves = document.getElementById('listeningWaves');
+        const pulse = document.getElementById('pulse');
+        const notification = document.getElementById('notification');
+        const rippleContainer = document.getElementById('rippleContainer');
+        const transcriptionEl = document.getElementById('transcription');
+        
+        // WebSocket Connection
+        let ws;
+        
+        // Audio Recording
+        let isRecording = false;
+        let mediaRecorder;
+        let audioContext;
+        let audioStream;
+        let audioProcessor;
+        
+        // Function to check if getUserMedia is available
+        function isGetUserMediaSupported() {
+            return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+        }
+
+        // Function to test microphone access
+        async function testMicAccess() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop());
+                return true;
+            } catch (e) {
+                log(`Microphone test failed: ${e.message}`);
+                return false;
+            }
+        }
+
+        // Start recording audio
+        async function startRecording() {
+            try {
+                // Check browser support
+                if (!isGetUserMediaSupported()) {
+                    throw new Error("Your browser doesn't support microphone access. Please use Chrome, Firefox, or Edge.");
+                }
+                
+                // Test microphone access first
+                const micAccessOk = await testMicAccess();
+                if (!micAccessOk) {
+                    throw new Error("Microphone access was denied or not available.");
+                }
+                
+                // Now proceed with actual recording
+                audioStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 16000
+                    } 
+                });
+                
+                try {
+                    // Create audio context
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                        sampleRate: 16000
+                    });
+                    await audioContext.resume();
+                    
+                    log(`Audio context sample rate: ${audioContext.sampleRate}Hz`);
+                    
+                    const source = audioContext.createMediaStreamSource(audioStream);
+                    
+                    // Create a processor node for audio analysis
+                    audioProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+                    
+                    // Connect nodes
+                    source.connect(audioProcessor);
+                    audioProcessor.connect(audioContext.destination);
+                    
+                    // Set up data handling with PCM conversion in-browser
+                    let inputSampleRate = audioContext.sampleRate;
+                    let targetSampleRate = 16000;
+                    
+                    // Create a workable buffer in memory
+                    let buffer = new Float32Array(0);
+                    
+                    // This function will resample audio to 16kHz and convert to 16-bit PCM
+// This function will resample audio to 16kHz and convert to 16-bit PCM
+audioProcessor.onaudioprocess = function(e) {
+    // Get mono channel data
+    const inputData = e.inputBuffer.getChannelData(0);
+    
+    // Calculate energy to check if there's sound
+    let energy = 0;
+    for (let i = 0; i < inputData.length; i++) {
+        energy += Math.abs(inputData[i]);
+    }
+    energy = energy / inputData.length;
+    
+    // Skip silent audio to reduce WebSocket traffic
+    if (energy < 0.005) {
+        return; // Skip processing for near-silent audio
+    }
+    
+    // Append to buffer
+    const newBuffer = new Float32Array(buffer.length + inputData.length);
+    newBuffer.set(buffer);
+    newBuffer.set(inputData, buffer.length);
+    buffer = newBuffer;
+    
+    // Only process if we have enough data (about 100ms worth)
+    if (buffer.length > inputSampleRate / 10) {
+        // Convert to 16kHz sample rate if needed
+        let resampledBuffer;
+        if (inputSampleRate !== targetSampleRate) {
+            // Simple downsampling - take every Nth sample
+            const ratio = Math.floor(inputSampleRate / targetSampleRate);
+            resampledBuffer = new Float32Array(Math.floor(buffer.length / ratio));
+            for (let i = 0, j = 0; i < buffer.length; i += ratio, j++) {
+                resampledBuffer[j] = buffer[i];
+            }
+        } else {
+            resampledBuffer = buffer;
+        }
+        
+        // Convert float32 [-1,1] to int16 [-32768,32767]
+        const pcmBuffer = new Int16Array(resampledBuffer.length);
+        for (let i = 0; i < resampledBuffer.length; i++) {
+            // Scale to int16 range with clipping protection
+            const sample = Math.max(-1, Math.min(1, resampledBuffer[i]));
+            pcmBuffer[i] = sample < 0 
+                ? sample * 0x8000 
+                : sample * 0x7FFF;
+        }
+        
+        // Send to server
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            try {
+                ws.send(pcmBuffer.buffer);
+            } catch (error) {
+                log(`Error sending audio data: ${error.message}`);
+            }
+        }
+        
+        // Reset buffer but keep the last bit for overlap
+        const overlap = Math.floor(inputSampleRate / 100); // 10ms overlap
+        buffer = new Float32Array(buffer.slice(buffer.length - overlap));
+    }
+};
+
+                    isRecording = true;
+                    updateStatus('listening', 'Listening for commands...');
+                    startButton.disabled = true;
+                    stopButton.disabled = false;
+                    
+                    log('Started recording audio and processing with ScriptProcessor');
+                } catch (e) {
+                    throw new Error(`Audio context error: ${e.message}`);
+                }
+            } catch (error) {
+                log(`Error starting recording: ${error.message}`);
+                updateStatus('disconnected', 'Error: ' + error.message);
+                alert(error.message + "\n\nTry these solutions:\n1. Make sure you're using a modern browser like Chrome or Firefox\n2. Access the site via https:// or localhost (not IP address)\n3. Check your browser's site permissions and allow microphone access");
+                
+                // Clean up any partially initialized resources
+                if (audioStream) {
+                    audioStream.getTracks().forEach(track => track.stop());
+                }
+                if (audioContext) {
+                    audioContext.close();
+                }
+                
+                startButton.disabled = false;
+                throw error;
+            }
+        }
+        
+        // Stop recording audio
+        function stopRecording() {
+            if (!isRecording) return;
+            
+            if (audioProcessor) {
+                audioProcessor.disconnect();
+            }
+            
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+            }
+            
+            if (audioContext) {
+                audioContext.close();
+            }
+            
+            isRecording = false;
+            updateStatus('connected', 'Connected (not listening)');
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            
+            log('Stopped recording audio');
+        }
+        
+        // Add ripple effect for play command
+        function createRippleEffect() {
+            rippleContainer.style.display = 'block';
+            setTimeout(() => {
+                rippleContainer.style.display = 'none';
+            }, 2000);
+        }
+        
+        // Show notification
+        function showNotification(command) {
+            notification.textContent = command.toUpperCase() + " command detected!";
+            notification.className = `command-notification ${command}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+            
+            if (command === 'play') {
+                createRippleEffect();
+            }
+        }
+        
+        // Log function
+        function log(message) {
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            logsEl.appendChild(logEntry);
+            logsEl.scrollTop = logsEl.scrollHeight;
+        }
+        
+        // Update status
+        function updateStatus(status, message) {
+            statusEl.className = `status ${status}`;
+            statusEl.textContent = message;
+            
+            // Toggle listening animation
+            if (status === 'listening') {
+                listeningWaves.style.display = 'block';
+                pulse.style.display = 'block';
+            } else {
+                listeningWaves.style.display = 'none';
+                pulse.style.display = 'none';
+            }
+        }
+        
+        // Connect WebSocket
+// Connect WebSocket
+function connectWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    
+    log(`Connecting to WebSocket at ${wsUrl}`);
+    
+    // Close existing connection if any
+    if (ws) {
+        try {
+            ws.close();
+        } catch (e) {
+            console.error("Error closing existing connection:", e);
+        }
+    }
+    
+    // Create new connection
+    ws = new WebSocket(wsUrl);
+    
+    ws.onopen = function() {
+        updateStatus('connected', 'Connected (not listening)');
+        log('WebSocket connection established');
+        startButton.disabled = false;
+    };
+    
+    ws.onclose = function(event) {
+        updateStatus('disconnected', 'Disconnected from server');
+        log(`WebSocket connection closed: ${event.code} ${event.reason}`);
+        stopRecording();
+        startButton.disabled = false;
+        stopButton.disabled = true;
+        
+        // Try to reconnect after a short delay
+        setTimeout(connectWebSocket, 3000);
+    };
+    
+    ws.onerror = function(error) {
+        log(`WebSocket error: ${error}`);
+        updateStatus('disconnected', 'Connection error');
+    };
+    
+    ws.onmessage = function(event) {
+        const message = event.data;
+        
+        // Check if it's a command or transcription
+        if (message === 'play' || message === 'pause') {
+            // Handle command
+            log(`Command received: ${message}`);
+            
+            // Update interface with animations
+            if (message === 'play') {
+                commandEmoji.textContent = '▶️';
+                commandText.textContent = 'Playing';
+                showNotification('play');
+            } else if (message === 'pause') {
+                commandEmoji.textContent = '⏸️';
+                commandText.textContent = 'Paused';
+                showNotification('pause');
+            }
+        } else {
+            // It's a transcription, update the transcription area
+            log(`Transcription: ${message}`);
+            transcriptionEl.textContent = message;
+        }
+    };
+}
+        
+        // Create animated ripples
+        function createRipples() {
+            const container = document.querySelector('.ripple-container');
+            setInterval(() => {
+                if (isRecording) {
+                    const ripple = document.createElement('div');
+                    ripple.classList.add('ripple');
+                    
+                    // Random position
+                    const size = Math.random() * 5 + 5;
+                    const x = Math.random() * 150;
+                    const y = Math.random() * 150;
+                    
+                    ripple.style.width = `${size}px`;
+                    ripple.style.height = `${size}px`;
+                    ripple.style.left = `${x}px`;
+                    ripple.style.top = `${y}px`;
+                    
+                    container.appendChild(ripple);
+                    
+                    // Remove after animation completes
+                    setTimeout(() => {
+                        ripple.remove();
+                    }, 2000);
+                }
+            }, 300);
+        }
+        
+        // Event listeners
+        startButton.addEventListener('click', async function() {
+            try {
+                // Unlock audio context with user gesture
+                if (typeof window.AudioContext !== 'undefined' || typeof window.webkitAudioContext !== 'undefined') {
+                    // Create temporary context to unlock audio
+                    const tempContext = new (window.AudioContext || window.webkitAudioContext)();
+                    tempContext.resume().then(() => {
+                        if (tempContext.state === "running") {
+                            // Temporary context is running, we can close it
+                            tempContext.close();
+                        }
+                    });
+                }
+                
+                // Add overlay with instructions if needed
+                const hasSupport = isGetUserMediaSupported();
+                if (!hasSupport) {
+                    alert("Your browser doesn't support microphone access. Please use Chrome, Firefox, or Edge.");
+                    return;
+                }
+                
+                startButton.disabled = true;
+                startButton.textContent = "Requesting microphone...";
+                
+                // Start recording with delay to allow UI update
+                setTimeout(() => {
+                    startRecording().catch(error => {
+                        log(`Error starting recording: ${error.message}`);
+                        alert(error.message);
+                        startButton.disabled = false;
+                        startButton.textContent = "Start Listening";
+                    });
+                }, 100);
+            } catch (e) {
+                log(`Error handling start button: ${e.message}`);
+                alert("Error: " + e.message);
+                startButton.disabled = false;
+            }
+        });
+        
+        stopButton.addEventListener('click', stopRecording);
+        
+        // Browser compatibility check
+        window.addEventListener('load', function() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                const warning = document.createElement('div');
+                warning.style.backgroundColor = '#ff5252';
+                warning.style.color = 'white';
+                warning.style.padding = '10px';
+                warning.style.textAlign = 'center';
+                warning.style.position = 'fixed';
+                warning.style.top = '0';
+                warning.style.left = '0';
+                warning.style.right = '0';
+                warning.style.zIndex = '9999';
+                warning.innerHTML = `
+                    <strong>Browser Compatibility Issue:</strong> 
+                    Your browser doesn't support microphone access. 
+                    Please use Chrome, Firefox, or Edge for full functionality.
+                    <button style="margin-left: 10px; padding: 5px 10px; border: none; background: white; color: #333; border-radius: 4px;">Dismiss</button>
+                `;
+                
+                warning.querySelector('button').addEventListener('click', function() {
+                    warning.style.display = 'none';
+                });
+                
+                document.body.prepend(warning);
+            }
+        });
+        
+        // Initialize
+        connectWebSocket();
+        createRipples();
+    </script>
+</body>
+</html>
